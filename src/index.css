@@ -1,0 +1,781 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ======================================================================
+   Design Tokens — 全局 CSS 变量
+   ====================================================================== */
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2035;
+  --bg-input: #0d1321;
+  --border-subtle: rgba(99, 126, 184, 0.15);
+  --border-active: rgba(99, 180, 255, 0.4);
+  --border-danger: rgba(239, 68, 68, 0.4);
+  --text-primary: #e8edf5;
+  --text-secondary: #8b9cc0;
+  --text-muted: #5b6b8a;
+  --text-placeholder: #3d4e6a;
+  --accent-blue: #3b82f6;
+  --accent-blue-glow: rgba(59, 130, 246, 0.25);
+  --accent-cyan: #22d3ee;
+  --accent-amber: #f59e0b;
+  --accent-amber-glow: rgba(245, 158, 11, 0.12);
+  --accent-green: #10b981;
+  --accent-green-glow: rgba(16, 185, 129, 0.15);
+  --accent-red: #ef4444;
+  --accent-purple: #a78bfa;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.15), 0 0 60px rgba(59, 130, 246, 0.05);
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ======================================================================
+   Global Reset & Base
+   ====================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 背景装饰：微妙的径向渐变光晕 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(34, 211, 238, 0.05), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ======================================================================
+   Layout — 整体页面布局
+   ====================================================================== */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 48px;
+}
+
+.app-content {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* PC端两栏布局：信息区 + 工具箱并排 */
+@media (min-width: 768px) {
+  .app-content {
+    max-width: 960px;
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+}
+
+/* 手机端单栏 */
+@media (max-width: 767px) {
+  .main-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+/* ======================================================================
+   Header — 页面标题
+   ====================================================================== */
+.app-header {
+  text-align: center;
+  padding-bottom: 4px;
+}
+
+.app-header h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-line {
+  height: 1px;
+  margin-top: 12px;
+  background: linear-gradient(90deg, transparent, var(--border-active), transparent);
+}
+
+@media (min-width: 768px) {
+  .app-header h1 {
+    font-size: 24px;
+  }
+}
+
+/* ======================================================================
+   Cards — 通用卡片样式
+   ====================================================================== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition);
+}
+
+.card:hover {
+  border-color: var(--border-active);
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title .icon {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 24px;
+  }
+}
+
+/* ======================================================================
+   Info Card — 机器人信息区域（动态字段）
+   ====================================================================== */
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 单行字段：标签 + 值 + 操作按钮 */
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+
+.field-row:hover {
+  border-color: var(--border-active);
+}
+
+/* 字段标签（可编辑，外观看起来像普通文字，悬停时显示编辑样式） */
+.field-label {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  outline: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 2px;
+  min-width: 60px;
+  max-width: 120px;
+  flex-shrink: 0;
+  transition: all var(--transition);
+  cursor: text;
+}
+
+.field-label:hover {
+  border-bottom-color: var(--text-muted);
+}
+
+.field-label:focus {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+/* 字段值输入区 + 操作按钮的容器 */
+.field-value-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+/* 字段值输入框 */
+.field-value {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  text-align: right;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px;
+  transition: color var(--transition);
+}
+
+.field-value::placeholder {
+  color: var(--text-placeholder);
+  font-style: italic;
+}
+
+.field-value:focus {
+  color: var(--accent-cyan);
+}
+
+/* ======================================================================
+   Field Action Buttons — 复制 / 删除按钮
+   ====================================================================== */
+.copy-btn,
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 13px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.copy-btn:hover {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--accent-blue);
+}
+
+.copy-btn.copied {
+  background: var(--accent-green-glow);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--border-danger);
+  color: var(--accent-red);
+}
+
+/* ======================================================================
+   Add Field / Save Buttons — 添加字段 / 保存按钮
+   ====================================================================== */
+.add-field-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.add-field-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(34, 211, 238, 0.05);
+}
+
+.add-field-btn span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 保存按钮 */
+.save-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 有未保存修改时，按钮高亮 */
+.save-btn.has-changes {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 16px var(--accent-blue-glow);
+  opacity: 1;
+}
+
+.save-btn.has-changes:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.35);
+}
+
+.save-btn.has-changes:active {
+  transform: translateY(0);
+}
+
+/* 保存中的旋转动画 */
+.save-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ======================================================================
+   Toolbox Card — 工具箱区域
+   ====================================================================== */
+.toolbox-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbox-section {
+  margin-bottom: 16px;
+}
+
+.toolbox-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ======================================================================
+   Collapsible Config — 折叠配置区
+   ====================================================================== */
+.config-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color var(--transition);
+  text-align: left;
+}
+
+.config-toggle:hover {
+  color: var(--accent-amber);
+}
+
+.config-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.config-chevron {
+  font-size: 10px;
+  transition: transform var(--transition);
+  color: var(--text-muted);
+}
+
+.config-chevron.open {
+  transform: rotate(180deg);
+}
+
+.config-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              margin-top 0.35s ease;
+  opacity: 0;
+  margin-top: 0;
+}
+
+.config-body.open {
+  max-height: 200px;
+  opacity: 1;
+  margin-top: 14px;
+}
+
+.config-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.config-input:focus {
+  border-color: var(--accent-amber);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px var(--accent-amber-glow);
+}
+
+.config-download-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.config-download-btn:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* ======================================================================
+   Action Buttons — 操作按钮
+   ====================================================================== */
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 按钮内的图标 */
+.btn-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+/* pudu logo 在暗色背景下需要反色 */
+.btn-icon-pudu {
+  filter: invert(1) brightness(1.5);
+}
+
+.action-icon {
+  font-size: 16px;
+}
+
+/* Primary — 打开 PuduInstaller */
+.action-btn.primary {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #fff;
+  box-shadow: 0 4px 16px var(--accent-blue-glow);
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+}
+
+.action-btn.primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary — 跳转到 pudutech */
+.action-btn.secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.action-btn.secondary:hover {
+  border-color: var(--border-active);
+  background: rgba(26, 32, 53, 0.9);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+/* Ghost — 在我的电脑上打开此网页 */
+.action-btn.ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed rgba(91, 107, 138, 0.3);
+}
+
+.action-btn.ghost:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+  background: rgba(26, 32, 53, 0.4);
+}
+
+/* ======================================================================
+   Landing Page — 落地页（无 MAC 参数时显示）
+   ====================================================================== */
+.landing-card {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.landing-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.landing-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.landing-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.landing-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.landing-divider::before,
+.landing-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.landing-label {
+  display: block;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.landing-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.landing-input {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.landing-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-glow);
+}
+
+.landing-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.landing-go-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.landing-go-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--accent-blue-glow);
+}
+
+.landing-go-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ======================================================================
+   Loading Screen — 加载动画
+   ====================================================================== */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ======================================================================
+   Toast — 底部提示通知
+   ====================================================================== */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  padding: 10px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent-green);
+  border-radius: 999px;
+  color: var(--accent-green);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 16px rgba(16, 185, 129, 0.1);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  max-width: 90vw;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ======================================================================
+   Responsive — 小屏手机适配
+   ====================================================================== */
+@media (max-width: 380px) {
+  .app-container {
+    padding: 16px 10px 32px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .field-row {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .field-label {
+    font-size: 12px;
+    max-width: 80px;
+    min-width: 50px;
+  }
+
+  .field-value {
+    font-size: 12px;
+  }
+
+  .action-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  .copy-btn,
+  .delete-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+}
