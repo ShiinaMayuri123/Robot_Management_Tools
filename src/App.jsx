@@ -50,6 +50,9 @@ function App() {
   /** 手动输入的 MAC 地址（无参数时的落地页用） */
   const [manualMac, setManualMac] = useState('');
 
+  /** 已保存的设备列表 */
+  const [deviceList, setDeviceList] = useState([]);
+
   /**
    * 设备类型检测：判断是否为 PC 端
    * 用于 PuduInstaller 按钮的权限控制
@@ -68,7 +71,7 @@ function App() {
 
   /**
    * 初始化：从 URL 参数中读取 MAC 地址，然后从 API 获取数据
-   * 如果 URL 没有 ?mac= 参数，则显示落地页
+   * 如果 URL 没有 ?mac= 参数，则显示落地页并加载设备列表
    */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -77,6 +80,8 @@ function App() {
       setMac(macParam);
       fetchData(macParam);
     } else {
+      // 加载设备列表
+      loadDeviceList();
       setLoading(false);
     }
   }, []);
@@ -124,14 +129,88 @@ function App() {
   /**
    * 初始化默认字段（新机器人首次被访问时使用）
    * 自动创建 4 个常用字段，MAC 地址从 URL 参数预填
+   * 并自动保存到 localStorage
    */
   const initDefaultFields = (macAddr) => {
-    setFields([
+    const newFields = [
       { id: generateId(), label: 'MAC 地址', value: macAddr },
       { id: generateId(), label: '安装固件版本', value: '' },
       { id: generateId(), label: '本体APK版本', value: '' },
       { id: generateId(), label: '建图工具版本', value: '' },
-    ]);
+    ];
+    setFields(newFields);
+
+    // 自动保存新设备数据
+    const payload = { fields: newFields, updatedAt: new Date().toISOString() };
+    localStorage.setItem(`robot_${macAddr}`, JSON.stringify(payload));
+
+    // 添加到设备列表
+    addToDeviceList(macAddr);
+  };
+
+  /**
+   * 将设备添加到设备列表（去重）
+   */
+  const addToDeviceList = (macAddr) => {
+    const normalizedMac = macAddr.toUpperCase();
+    const listStr = localStorage.getItem('robot_list');
+    let list = [];
+
+    if (listStr) {
+      try {
+        list = JSON.parse(listStr);
+      } catch {
+        list = [];
+      }
+    }
+
+    // 去重：检查是否已存在（不区分大小写）
+    if (!list.some(item => item.mac.toUpperCase() === normalizedMac)) {
+      list.push({
+        mac: normalizedMac,
+        addedAt: new Date().toISOString()
+      });
+      localStorage.setItem('robot_list', JSON.stringify(list));
+    }
+  };
+
+  /**
+   * 从 localStorage 加载设备列表
+   */
+  const loadDeviceList = () => {
+    const listStr = localStorage.getItem('robot_list');
+    if (listStr) {
+      try {
+        const list = JSON.parse(listStr);
+        setDeviceList(list);
+      } catch {
+        setDeviceList([]);
+      }
+    } else {
+      setDeviceList([]);
+    }
+  };
+
+  /**
+   * 从设备列表中删除设备
+   */
+  const deleteDevice = (macAddr) => {
+    const normalizedMac = macAddr.toUpperCase();
+    const listStr = localStorage.getItem('robot_list');
+    if (listStr) {
+      try {
+        let list = JSON.parse(listStr);
+        list = list.filter(item => item.mac.toUpperCase() !== normalizedMac);
+        localStorage.setItem('robot_list', JSON.stringify(list));
+        setDeviceList(list);
+
+        // 同时删除设备数据
+        localStorage.removeItem(`robot_${macAddr}`);
+        showToast('🗑️ 设备已删除');
+      } catch {
+        showToast('❌ 删除失败');
+      }
+    }
   };
 
   /**
@@ -159,6 +238,9 @@ function App() {
     }
     setSaving(false);
     setHasChanges(false);
+
+    // 确保设备在列表中
+    addToDeviceList(mac);
   };
 
   // ===================== 字段操作 =====================
@@ -291,7 +373,7 @@ function App() {
               <span>或</span>
             </div>
 
-            <label className="landing-label">手动输入 MAC 地址</label>
+            <label className="landing-label">手动输入 MAC 地址（查看或添加设备）</label>
             <div className="landing-input-group">
               <input
                 className="landing-input"
@@ -311,6 +393,42 @@ function App() {
               </button>
             </div>
           </div>
+
+          {/* 已保存的设备列表 */}
+          {deviceList.length > 0 && (
+            <div className="card device-list-card">
+              <div className="card-title">
+                <span className="icon">📋</span>
+                已保存的设备 ({deviceList.length})
+              </div>
+              <div className="device-list">
+                {deviceList.map((device) => (
+                  <div className="device-item" key={device.mac}>
+                    <div className="device-info">
+                      <div className="device-mac">{device.mac}</div>
+                      <div className="device-time">
+                        添加于 {new Date(device.addedAt).toLocaleString('zh-CN')}
+                      </div>
+                    </div>
+                    <div className="device-actions">
+                      <button
+                        className="device-btn view-btn"
+                        onClick={() => window.location.href = `?mac=${encodeURIComponent(device.mac)}`}
+                      >
+                        查看
+                      </button>
+                      <button
+                        className="device-btn delete-btn"
+                        onClick={() => deleteDevice(device.mac)}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -324,7 +442,16 @@ function App() {
 
         {/* 页面标题 */}
         <header className="app-header">
-          <h1>Robot_Management_Terminal</h1>
+          <div className="header-top">
+            <h1>Robot_Management_Terminal</h1>
+            <button
+              className="back-home-btn"
+              onClick={() => window.location.href = '/'}
+              title="返回主页"
+            >
+              ← 返回主页
+            </button>
+          </div>
           <div className="header-line" />
         </header>
 
