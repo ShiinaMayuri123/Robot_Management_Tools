@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+// 导入多设备实时同步 Hook，用于每隔 5 秒从云端自动拉取最新数据
+import useRobotSync from './hooks/useRobotSync';
 
 /**
  * 工具函数：生成唯一 ID（用于动态字段的 key）
@@ -59,6 +61,14 @@ function App() {
    */
   const isPC = !/Mobi|Android|iPhone/i.test(navigator.userAgent);
 
+  /**
+   * 实时同步 Hook
+   * 当 mac 存在时，每 5 秒从云端 /api/robot?mac=... 拉取最新数据
+   * isSyncing: 正在同步时为 true，用于显示右上角的实时同步指示器
+   * syncData:  最新一次 API 响应的完整 JSON 对象
+   */
+  const { data: syncData, isSyncing } = useRobotSync(mac);
+
   // ===================== Toast 提示 =====================
 
   /** 显示底部 Toast 提示，2秒后自动消失 */
@@ -85,6 +95,19 @@ function App() {
       setLoading(false);
     }
   }, []);
+
+  /**
+   * 监听 useRobotSync 拉取的最新数据（syncData）
+   * 当检测到云端 fields 与本地不同时，自动更新 fields（仅在用户无未保存修改时执行）
+   * 这是实现多设备同步的核心逻辑：A 设备保存 → 5 秒内 B 设备自动刷新
+   */
+  useEffect(() => {
+    // 如果没有同步数据，或者用户有未保存的修改（避免覆盖用户正在编辑的内容），则跳过
+    if (!syncData || !syncData.fields || syncData.fields.length === 0) return;
+    if (hasChanges) return;
+    // 将云端最新 fields 同步到本地状态
+    setFields(syncData.fields);
+  }, [syncData]); // 每次 syncData 更新时触发
 
   /** 每次修改 exePath 时，自动保存到 localStorage */
   useEffect(() => {
@@ -444,13 +467,21 @@ function App() {
         <header className="app-header">
           <div className="header-top">
             <h1>Robot_Management_Terminal</h1>
-            <button
-              className="back-home-btn"
-              onClick={() => window.location.href = '/'}
-              title="返回主页"
-            >
-              ← 返回主页
-            </button>
+            <div className="header-right">
+              {/* 实时同步状态指示器：当 isSyncing 为 true 时显示动态同步图标 */}
+              {isSyncing && (
+                <span className="sync-indicator" title="正在同步云端数据...">
+                  <span className="sync-dot" /> 同步中
+                </span>
+              )}
+              <button
+                className="back-home-btn"
+                onClick={() => window.location.href = '/'}
+                title="返回主页"
+              >
+                ← 返回主页
+              </button>
+            </div>
           </div>
           <div className="header-line" />
         </header>
